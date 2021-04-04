@@ -115,4 +115,12 @@ public class DijkstraSP {
         if (edge.nodeU() == v) return edge.nodeV();
         else return edge.nodeU();
     }
+
+    public int pathScore(List<EndpointPair<Integer>> edges) {
+        int s = 0;
+        for (EndpointPair<Integer> edge : edges) {
+            s += weight(edge);
+        }
+        return s ^ 2;
+    }
 }
