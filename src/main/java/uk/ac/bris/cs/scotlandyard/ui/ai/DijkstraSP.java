@@ -116,7 +116,7 @@ public class DijkstraSP {
         else return edge.nodeU();
     }
 
-    public int pathScore(List<EndpointPair<Integer>> edges) {
+    public int pathScore(Iterable<EndpointPair<Integer>> edges) {
         int s = 0;
         for (EndpointPair<Integer> edge : edges) {
             s += weight(edge);
