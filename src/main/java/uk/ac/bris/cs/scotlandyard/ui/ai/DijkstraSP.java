@@ -90,12 +90,16 @@ public class DijkstraSP {
                     switch (colour) {
                         case "#f00":
                             detective = Detective.RED;
+                            break;
                         case "#0f0":
                             detective = Detective.GREEN;
+                            break;
                         case "#00f":
                             detective = Detective.BLUE;
+                            break;
                         case "#fff":
                             detective = Detective.WHITE;
+                            break;
                         case "#ff0":
                             detective = Detective.YELLOW;
                             break;
@@ -122,5 +126,9 @@ public class DijkstraSP {
             s += weight(edge);
         }
         return s ^ 2;
+    }
+
+    public static void main(String[] args) {
+
     }
 }
