@@ -24,7 +24,6 @@ public class MyAi implements Ai {
 			@Nonnull Board board,
 			Pair<Long, TimeUnit> timeoutPair) {
 		this.setup = board.getSetup();
-		Map<Move, Integer> scores = new HashMap<>();
         var moves = board.getAvailableMoves().asList();
 		ImmutableSet<Player> detectives = makeDetectives(board);
 		Pair<Move, Integer> finalMove = new Pair(moves.get(new Random().nextInt(moves.size())), 0);
@@ -57,8 +56,8 @@ public class MyAi implements Ai {
 				DijkstraSP dijkstra = new DijkstraSP(setup, detective.location(), detective);
 				score += dijkstra.pathScore(dijkstra.pathTo((int) dest));
 			}*/
-			
-			//TODO simulate mrX 
+
+			//TODO simulate mrX
 			/*for(Move newMove : gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives)).advance(move).getAvailableMoves()) {
 				if(newMove.commencedBy().isMrX()) {
 					score++;
