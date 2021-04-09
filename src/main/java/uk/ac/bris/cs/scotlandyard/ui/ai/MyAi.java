@@ -17,7 +17,6 @@ public class MyAi implements Ai {
 	Player mrX;
 	MyGameStateFactory gameStateFactory = new MyGameStateFactory();
 
-
 	@Nonnull @Override public String name() { return "mrX AI"; }
 
 	@Nonnull @Override public Move pickMove(
@@ -25,8 +24,22 @@ public class MyAi implements Ai {
 			Pair<Long, TimeUnit> timeoutPair) {
 		this.setup = board.getSetup();
         var moves = board.getAvailableMoves().asList();
-		ImmutableSet<Player> detectives = makeDetectives(board);
 		Pair<Move, Integer> finalMove = new Pair(moves.get(new Random().nextInt(moves.size())), 0);
+
+        for(Piece player : board.getPlayers()){
+        	if(player.isMrX()){
+				ImmutableMap<ScotlandYard.Ticket, Integer> mrXticket = makeTickets(
+						        board.getPlayerTickets(player).get().getCount(TAXI),
+								board.getPlayerTickets(player).get().getCount(BUS),
+								board.getPlayerTickets(player).get().getCount(UNDERGROUND),
+								board.getPlayerTickets(player).get().getCount(DOUBLE),
+								board.getPlayerTickets(player).get().getCount(SECRET));
+				mrX = new Player(player, mrXticket, finalMove.left().source());
+			}
+		}
+
+		ImmutableSet<Player> detectives = makeDetectives(board);
+
 		for(Move move: moves){
 		int score = 0;
 			if (move.commencedBy().isMrX()) {
@@ -57,12 +70,12 @@ public class MyAi implements Ai {
 				score += dijkstra.pathScore(dijkstra.pathTo((int) dest));
 			}*/
 
-			//TODO simulate mrX
-			/*for(Move newMove : gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives)).advance(move).getAvailableMoves()) {
+			
+			for(Move newMove : gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives)).advance(move).getAvailableMoves()) {
 				if(newMove.commencedBy().isMrX()) {
 					score++;
 				}
-			}*/
+			}
 			if(score >= finalMove.right()){
 				finalMove = new Pair(move, score);
 			};
