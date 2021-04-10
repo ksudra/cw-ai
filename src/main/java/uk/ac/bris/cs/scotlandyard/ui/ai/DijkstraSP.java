@@ -5,7 +5,6 @@ import com.google.common.graph.EndpointPair;
 
 import uk.ac.bris.cs.scotlandyard.model.*;
 import uk.ac.bris.cs.scotlandyard.model.Piece.Detective;
-
 import java.util.*;
 
 import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.SECRET;
@@ -18,9 +17,10 @@ public class DijkstraSP {
     private List<EndpointPair<Integer>> edgeTo;            // edgeTo[v] = last edge on shortest s->v path
     private IndexMinPQ<Double> pq;    // priority queue of vertices
 
-    public DijkstraSP(GameSetup setup, int s, Player player) {
+    public DijkstraSP(Board.GameState state, GameSetup setup, int s, Player player) {
         this.player = player;
         this.setup = setup;
+        this.state = state;
 
         for (EndpointPair<Integer> edge: setup.graph.edges()) {
             if (weight(edge) < 0)
@@ -126,9 +126,5 @@ public class DijkstraSP {
             s += weight(edge);
         }
         return s ^ 2;
-    }
-
-    public static void main(String[] args) {
-
     }
 }
