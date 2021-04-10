@@ -55,20 +55,20 @@ public class Dijkstra {
         int newDistance = -1;
 
         // All the neighbors of v
-        for (int i = 0; i < adj.get(u).size(); i++) {
-            Node v = adj.get(u).get(i);
+        for (int i = 0; i < adj.get(u - 1).size(); i++) {
+            Node v = adj.get(u - 1).get(i);
 
             // If current node hasn't already been processed
             if (!settled.contains(v.node)) {
                 edgeDistance = v.cost;
-                newDistance = dist[u] + edgeDistance;
+                newDistance = dist[u - 1] + edgeDistance;
 
                 // If new distance is cheaper in cost
-                if (newDistance < dist[v.node])
-                    dist[v.node] = newDistance;
+                if (newDistance < dist[v.node - 1])
+                    dist[v.node - 1] = newDistance;
 
                 // Add the current node to the queue
-                pq.add(new Node(v.node, dist[v.node]));
+                pq.add(new Node(v.node, dist[v.node - 1]));
             }
         }
     }
