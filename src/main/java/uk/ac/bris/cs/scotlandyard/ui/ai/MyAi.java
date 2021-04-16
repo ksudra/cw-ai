@@ -24,8 +24,6 @@ public class MyAi implements Ai {
 		this.setup = board.getSetup();
 		var moves = board.getAvailableMoves().asList();
 		Pair<Move, Integer> finalMove = new Pair(moves.get(new Random().nextInt(moves.size())), 0);
-		Pair<Move, Integer> simulatedMove = new Pair(moves.get(new Random().nextInt(moves.size())), 0);
-		List<List<Node>> adjacencyList = new ArrayList<>();
 
 		for(Piece player : board.getPlayers()){
 			if(player.isMrX()){
@@ -139,7 +137,7 @@ public class MyAi implements Ai {
 			if(player.piece().isMrX()) {
 				for (Player detective : detectives) {
 					dij.dijkstra(adj, detective.location());
-					score += dij.dist[mrX.location()];
+					score += dij.dist[mrX.location() - 1];
 				}
 				for(Move newMove : gameState.getAvailableMoves()) {
 					if(newMove.commencedBy().isMrX()) {
@@ -148,7 +146,7 @@ public class MyAi implements Ai {
 				}
 			} else if(player.piece().isDetective()) {
 				dij.dijkstra(adj, player.location());
-				score = dij.dist[mrX.location()];
+				score = dij.dist[mrX.location() - 1];
 			}
 			moveList.add(new Pair(move, score));
 		}
