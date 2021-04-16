@@ -141,25 +141,24 @@ public class MyAi implements Ai {
 				ArrayList<Integer> distances = new ArrayList<>();
 				for (Player detective : detectives) {
 					dij.dijkstra(adj, detective.location());
-					distances.add((dij.dist[mrX.location()]));
+					distances.add((dij.dist[(int) dest]));
 				}
+				System.out.println(distances);
 				List<Double> squares = distances.stream().map((p -> (Double) Math.pow(p, 2))).collect(Collectors.toList());
 				Double squaresSum = squares.stream().mapToDouble(Double::doubleValue).sum();
 				Double var = (squaresSum - distances.size() * meanOf(distances)) / distances.size();
 				score = meanOf(distances) / var;
 			}
 		  	    score = score * (gameState.getAvailableMoves().size());
-			if (move.commencedBy().isMrX()) {
+			/*if (move.commencedBy().isMrX()) {
 				for (ScotlandYard.Ticket ticket : move.tickets()) {
 					switch (ticket) {
-						case TAXI: score = score;
-						case BUS: score = 1.1 * score;
-						case UNDERGROUND: score = 1.4 * score;
-						case SECRET: score = 1.5 * score;
-						case DOUBLE: score = 1.7 * score;
+						case UNDERGROUND: score = 1.2 * score;
+						case SECRET: score = 1.2 * score;
+						case DOUBLE: score = 1.2 * score;
 					}
 				}
-			}
+			}*/
 				if(player.piece().isDetective()) {
 				dij.dijkstra(adj, player.location());
 				score -= dij.dist[mrX.location()] ^ 2;
@@ -169,6 +168,9 @@ public class MyAi implements Ai {
 
 		Collections.sort(moveList, Comparator.comparing(move -> (Double) move.right()));
 		Collections.reverse(moveList);
+		if(player.isMrX()) {
+			//System.out.println(moveList);
+		}
 		return moveList;
 	}
 
