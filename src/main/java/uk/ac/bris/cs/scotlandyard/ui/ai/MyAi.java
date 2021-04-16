@@ -118,17 +118,7 @@ public class MyAi implements Ai {
 		Board.GameState initial = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
 		for(Move move: moves){
 			Double score = 0.0;
-			/*if (move.commencedBy().isMrX()) {
-				for (ScotlandYard.Ticket ticket : move.tickets()) {
-					switch (ticket) {
-						case TAXI: score += mrX.tickets().get(TAXI);
-						case BUS: score += 2 * mrX.tickets().get(BUS);
-						case UNDERGROUND: score += 3 * mrX.tickets().get(UNDERGROUND);
-						case SECRET: score += 4 * mrX.tickets().get(SECRET);
-						case DOUBLE: score += 5 * mrX.tickets().get(DOUBLE);
-					}
-				}
-			}*/
+
 			Object dest = move.visit(new Move.Visitor<Object>() {
 				@Override
 				public Object visit(Move.SingleMove move) {
@@ -159,8 +149,17 @@ public class MyAi implements Ai {
 				score = meanOf(distances) / var;
 			}
 		  	    score = score * (gameState.getAvailableMoves().size());
-
-
+			if (move.commencedBy().isMrX()) {
+				for (ScotlandYard.Ticket ticket : move.tickets()) {
+					switch (ticket) {
+						case TAXI: score = score;
+						case BUS: score = 1.1 * score;
+						case UNDERGROUND: score = 1.4 * score;
+						case SECRET: score = 1.5 * score;
+						case DOUBLE: score = 1.7 * score;
+					}
+				}
+			}
 				if(player.piece().isDetective()) {
 				dij.dijkstra(adj, player.location());
 				score -= dij.dist[mrX.location()] ^ 2;
