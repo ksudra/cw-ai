@@ -5,22 +5,18 @@ import java.util.Comparator;
 // Class to represent a node in the graph
 public class Node implements Comparator<Node> {
     public int node;
-    public int cost;
+    public int weight;
 
     public Node() {
     }
 
-    public Node(int node, int cost) {
+    public Node(int node, int weight) {
         this.node = node;
-        this.cost = cost;
+        this.weight = weight;
     }
 
     @Override
     public int compare(Node node1, Node node2) {
-        if (node1.cost < node2.cost)
-            return -1;
-        if (node1.cost > node2.cost)
-            return 1;
-        return 0;
+        return Integer.compare(node1.weight, node2.weight);
     }
 }

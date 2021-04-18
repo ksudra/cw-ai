@@ -1,74 +1,54 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
-import uk.ac.bris.cs.scotlandyard.model.GameSetup;
-
 import java.util.*;
 
 public class Dijkstra {
-    public int dist[];
-    private Set<Integer> settled;
-    private PriorityQueue<Node> pq;
-    private int V; // Number of vertices
-    private GameSetup setup;
-    List<List<Node>> adj;
+    public int[] dist;
+    private final Set<Integer> settled;
+    private final PriorityQueue<Node> priorityQueue;
+    private final int nodes;
+    List<List<Node>> adjacencyList;
 
-    public Dijkstra(int V, List<List<Node>> adj)
+    public Dijkstra(int nodes, List<List<Node>> adjacencyList)
     {
-        this.adj = adj;
-        this.V = V;
-        dist = new int[V];
-        settled = new HashSet<Integer>();
-        pq = new PriorityQueue<Node>(V, new Node());
+        this.adjacencyList = adjacencyList;
+        this.nodes = nodes;
+        dist = new int[nodes];
+        settled = new HashSet<>();
+        priorityQueue = new PriorityQueue<>(nodes, new Node());
     }
 
-    // Function for Dijkstra's Algorithm
-    public void dijkstra(List<List<Node>> adj, int src)
-    {
+    public void dijkstra(int source) {
 
-        for (int i = 0; i < V; i++)
+        for (int i = 0; i < nodes; i++)
             dist[i] = Integer.MAX_VALUE;
 
-        // Add source node to the priority queue
-        pq.add(new Node(src, 0));
+        priorityQueue.add(new Node(source, 0));
 
-        // Distance to the source is 0
-        dist[src] = 0;
-        while (settled.size() != V) {
-
-            // remove the minimum distance node
-            // from the priority queue
-            int u = pq.remove().node;
-
-            // adding the node whose distance is
-            // finalized
+        dist[source] = 0;
+        while (settled.size() != nodes) {
+            int u = priorityQueue.remove().node;
             settled.add(u);
-
-            e_Neighbours(u);
+            relax(u);
         }
     }
 
-    // Function to process all the neighbours
-    // of the passed node
-    private void e_Neighbours(int u)
+    private void relax(int u)
     {
-        int edgeDistance = -1;
-        int newDistance = -1;
+        int edgeDistance;
+        int newDistance;
 
-        // All the neighbors of v
-        for (int i = 0; i < adj.get(u - 1).size(); i++) {
-            Node v = adj.get(u - 1).get(i);
-
-            // If current node hasn't already been processed
+        for (int i = 0; i < adjacencyList.get(u - 1).size(); i++) {
+            Node v = adjacencyList.get(u - 1).get(i);
+            
             if (!settled.contains(v.node)) {
-                edgeDistance = v.cost;
+                edgeDistance = v.weight;
                 newDistance = dist[u - 1] + edgeDistance;
 
-                // If new distance is cheaper in cost
                 if (newDistance < dist[v.node - 1])
                     dist[v.node - 1] = newDistance;
 
-                // Add the current node to the queue
-                pq.add(new Node(v.node, dist[v.node - 1]));
+                priorityQueue.add(new Node(v.node, dist[v.node - 1]));
             }
         }
     }

@@ -1,8 +1,5 @@
 package uk.ac.bris.cs.scotlandyard.ui.ai;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Delegates to the actual UI main
  */
