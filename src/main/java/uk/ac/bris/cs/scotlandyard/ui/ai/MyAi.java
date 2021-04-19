@@ -48,7 +48,7 @@ public class MyAi implements Ai {
                         case TAXI: w++;
                         case BUS: w += 2;
                         case UNDERGROUND: w += 4;
-                        case FERRY: w = Integer.MAX_VALUE;
+                        case FERRY: w += 8;
                     }
                 }
                 w = w / Objects.requireNonNull(setup.graph.edgeValue(i, j).orElse(null)).size();
