@@ -17,7 +17,6 @@ import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.*;
 public class MyAi implements Ai {
 	GameSetup setup;
 	Player mrX;
-	Integer mrXLocation;
 	MyGameStateFactory gameStateFactory = new MyGameStateFactory();
 
 	@Nonnull @Override public String name() { return "mrX AI"; }
@@ -28,9 +27,7 @@ public class MyAi implements Ai {
 		this.setup = board.getSetup();
 		var moves = board.getAvailableMoves().asList();
 		Pair<Move, Integer> finalMove = new Pair(moves.get(new Random().nextInt(moves.size())), 0);
-
-	mrXLocation = board.getAvailableMoves().asList().get(0).source();
-
+		
 		for(Piece player : board.getPlayers()){
 			if(player.isMrX()){
 				ImmutableMap<ScotlandYard.Ticket, Integer> mrXticket = makeTickets(
@@ -39,7 +36,7 @@ public class MyAi implements Ai {
 						board.getPlayerTickets(player).get().getCount(UNDERGROUND),
 						board.getPlayerTickets(player).get().getCount(DOUBLE),
 						board.getPlayerTickets(player).get().getCount(SECRET));
-				mrX = new Player(player, mrXticket, mrXLocation);
+				mrX = new Player(player, mrXticket, finalMove.left().source());
 			}
 		}
 
@@ -141,7 +138,7 @@ public class MyAi implements Ai {
 				ArrayList<Integer> distances = new ArrayList<>();
 				for (Player detective : detectives) {
 					dij.dijkstra(detective.location());
-					distances.add((dij.dist[mrX.location()]));
+					distances.add((dij.dist[(Integer)dest - 1]));
 				}
 				System.out.println(distances);
 				List<Double> squares = distances.stream().map((p -> (Double) Math.pow(p, 2))).collect(Collectors.toList());
@@ -149,7 +146,7 @@ public class MyAi implements Ai {
 				Double var = (squaresSum - distances.size() * meanOf(distances)) / distances.size();
 				score = meanOf(distances) / var;
 			}
-		  	    score = score * (gameState.getAvailableMoves().size());
+			score = score * (gameState.getAvailableMoves().size());
 			/*if (move.commencedBy().isMrX()) {
 				for (ScotlandYard.Ticket ticket : move.tickets()) {
 					switch (ticket) {
@@ -159,7 +156,7 @@ public class MyAi implements Ai {
 					}
 				}
 			}*/
-				if(player.piece().isDetective()) {
+			if(player.piece().isDetective()) {
 				dij.dijkstra(player.location());
 				score -= dij.dist[mrX.location()] ^ 2;
 			}
