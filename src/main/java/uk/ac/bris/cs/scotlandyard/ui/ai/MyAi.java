@@ -120,11 +120,22 @@ public class MyAi implements Ai {
             
             Board.GameState gameState = initial.advance(move);
             Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
+            int dest = move.visit(new Move.Visitor<>(){
+                @Override
+                public Integer visit(Move.SingleMove move) {
+                    return move.destination;
+                }
+
+                @Override
+                public Integer visit(Move.DoubleMove move) {
+                    return move.destination2;
+                }
+            });
 
             if(player.piece().isMrX()) {
                 for (Player detective : detectives) {
                     dij.dijkstra(detective.location());
-                    score += dij.dist[mrX.location() - 1];
+                    score += dij.dist[dest - 1];
                 }
                 for(Move newMove : gameState.getAvailableMoves()) {
                     if(newMove.commencedBy().isMrX()) {
@@ -132,9 +143,10 @@ public class MyAi implements Ai {
                     }
                 }
             } else if(player.piece().isDetective()) {
-                dij.dijkstra(player.location());
+                dij.dijkstra(dest);
                 score = dij.dist[mrX.location() - 1];
             }
+
             moveList.add(new Pair<>(move, score));
         }
         moveList.sort(Comparator.comparing(move -> move.right()));
