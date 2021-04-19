@@ -55,10 +55,10 @@ public class MyAi implements Ai {
 						case TAXI: w++;
 						case BUS: w += 2;
 						case UNDERGROUND: w += 4;
-						case FERRY: w = Integer.MAX_VALUE;
+						case FERRY: w += 8;
 					}
 				}
-				w = w / setup.graph.edgeValue(i, j).orElse(null).size();
+				w = w / Objects.requireNonNull(setup.graph.edgeValue(i, j).orElse(null)).size();
 				item.add(new Node(j, w));
 			}
 		}
@@ -140,8 +140,8 @@ public class MyAi implements Ai {
 			if(player.piece().isMrX()) {
 				ArrayList<Integer> distances = new ArrayList<>();
 				for (Player detective : detectives) {
-					dij.dijkstra(adj, detective.location());
-					distances.add((dij.dist[(int) dest]));
+					dij.dijkstra(detective.location());
+					distances.add((dij.dist[mrX.location()]));
 				}
 				System.out.println(distances);
 				List<Double> squares = distances.stream().map((p -> (Double) Math.pow(p, 2))).collect(Collectors.toList());
@@ -160,7 +160,7 @@ public class MyAi implements Ai {
 				}
 			}*/
 				if(player.piece().isDetective()) {
-				dij.dijkstra(adj, player.location());
+				dij.dijkstra(player.location());
 				score -= dij.dist[mrX.location()] ^ 2;
 			}
 			moveList.add(new Pair(move, score));
