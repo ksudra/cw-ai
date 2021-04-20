@@ -13,14 +13,14 @@ public class Dijkstra {
     {
         this.adjacencyList = adjacencyList;
         this.nodes = nodes;
-        dist = new int[nodes];
+        dist = new int[nodes + 1];
         settled = new HashSet<>();
         priorityQueue = new PriorityQueue<>(nodes, new Node());
     }
 
     public void dijkstra(int source) {
 
-        for (int i = 0; i < nodes; i++)
+        for (int i = 0; i < nodes + 1; i++)
             dist[i] = Integer.MAX_VALUE;
 
         priorityQueue.add(new Node(source, 0));
@@ -38,17 +38,17 @@ public class Dijkstra {
         int edgeDistance;
         int newDistance;
 
-        for (int i = 0; i < adjacencyList.get(u - 1).size(); i++) {
-            Node v = adjacencyList.get(u - 1).get(i);
+        for (int i = 0; i < adjacencyList.get(u).size(); i++) {
+            Node v = adjacencyList.get(u).get(i);
             
             if (!settled.contains(v.node)) {
                 edgeDistance = v.weight;
-                newDistance = dist[u - 1] + edgeDistance;
+                newDistance = dist[u] + edgeDistance;
 
-                if (newDistance < dist[v.node - 1])
-                    dist[v.node - 1] = newDistance;
+                if (newDistance < dist[v.node])
+                    dist[v.node] = newDistance;
 
-                priorityQueue.add(new Node(v.node, dist[v.node - 1]));
+                priorityQueue.add(new Node(v.node, dist[v.node]));
             }
         }
     }
