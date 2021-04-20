@@ -68,9 +68,9 @@ public class MyAi implements Ai {
 
         List<Pair<Move, Integer>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj);
         Move returnedMove = moveList.get(0).left();
-        for (int i = 0; i < moveList.size(); i++) {
-            System.out.println(moveList.get(i).right());
-        }
+//        for (int i = 0; i < moveList.size(); i++) {
+//            System.out.println(moveList.get(i).right());
+//        }
 //        Stack<Move> moveStack = new Stack<>();
 //        for (int i = 2; i > -1; i--) {
 //            moveStack.push(moveList.get(i).left());
@@ -126,7 +126,7 @@ public class MyAi implements Ai {
             }
             
             Board.GameState gameState = initial.advance(move);
-            Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
+
             int dest = move.visit(new Move.Visitor<>(){
                 @Override
                 public Integer visit(Move.SingleMove move) {
@@ -141,7 +141,9 @@ public class MyAi implements Ai {
 
             if(player.piece().isMrX()) {
                 for (Player detective : detectives) {
+                    Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
                     dij.dijkstra(detective.location());
+                    System.out.println(dij.dist[dest]);
                     score += dij.dist[dest];
                 }
 //                for(Move newMove : gameState.getAvailableMoves()) {
@@ -150,6 +152,7 @@ public class MyAi implements Ai {
 //                    }
 //                }
             } else if(player.piece().isDetective()) {
+                Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
                 dij.dijkstra(mrX.location());
                 score = dij.dist[mrX.location()];
             }
