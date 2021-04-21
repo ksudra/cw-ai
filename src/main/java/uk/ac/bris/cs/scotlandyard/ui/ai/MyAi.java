@@ -66,46 +66,71 @@ public class MyAi implements Ai {
         Board.GameState gameSimulation = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
         Board.GameState initial = gameSimulation;
 
-        List<Pair<Move, Integer>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj);
+        List<Pair<Move, Integer>> moveList = moveScores(randomSet(gameSimulation.getAvailableMoves(), mrX.piece()), ImmutableList.copyOf(detectives), mrX, adj);
         Move returnedMove = moveList.get(0).left();
-//        for (int i = 0; i < moveList.size(); i++) {
-//            System.out.println(moveList.get(i).right());
-//        }
-//        Stack<Move> moveStack = new Stack<>();
-//        for (int i = 2; i > -1; i--) {
-//            moveStack.push(moveList.get(i).left());
-//        }
-//        boolean complete = false;
-//        int n = 0;
-//        while(!moveStack.isEmpty() && !complete) {
-//
-//            Move currentMove = moveStack.pop();
-//            gameSimulation.advance(currentMove);
-//
-//            while(gameSimulation.getWinner() != mrX.piece() && n < 3) {
-//                if (!gameSimulation.getWinner().isEmpty() && gameSimulation.getWinner() != mrX.piece()) {
-//                    gameSimulation = initial;
-//                    break;
-//                } else if (gameSimulation.getWinner() == mrX.piece()) {
-//                    returnedMove = currentMove;
-//                    complete = true;
-//                    break;
-//                }
-//
-//                for (Player detective : detectives) {
-//                    gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives), detective, adj).get(0).left());
-//                }
-//
-//                gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj).get(0).left());
-//                n++;
-//            }
-//
-//        }
-//        if(n >= 3) {
-//            returnedMove = moveList.get(0).left();
-//        }
+        Stack<Move> moveStack = new Stack<>();
+        if (moveList.size() >= 3) {
+            for (int i = 2; i > -1; i--) {
+                moveStack.push(moveList.get(i).left());
+            }
+        } else {
+            Collections.reverse(moveList);
+            for (Pair<Move, Integer> move : moveList) {
+                moveStack.push(move.left());
+            }
+        }
+        boolean complete = false;
+        int n = 0;
+        while(!moveStack.isEmpty() && !complete) {
+
+            Move currentMove = moveStack.pop();
+            gameSimulation.advance(currentMove);
+
+            while(gameSimulation.getWinner() != mrX.piece() && n < 2) {
+                if (!gameSimulation.getWinner().isEmpty() && gameSimulation.getWinner() != mrX.piece()) {
+                    gameSimulation = initial;
+                    break;
+                } else if (gameSimulation.getWinner() == mrX.piece()) {
+                    returnedMove = currentMove;
+                    complete = true;
+                    break;
+                }
+
+                for (Player detective : detectives) {
+                    gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives), detective, adj).get(0).left());
+                }
+
+                gameSimulation.advance(moveScores(randomSet(gameSimulation.getAvailableMoves(), mrX.piece()), ImmutableList.copyOf(detectives), mrX, adj).get(0).left());
+                n++;
+            }
+
+        }
+        if(n >= 2) {
+            returnedMove = moveList.get(0).left();
+        }
 
         return returnedMove;
+    }
+
+    ImmutableSet<Move> randomSet(ImmutableSet<Move> moves, Piece piece) {
+        List<Move> playerMoves = new ArrayList<>();
+        Set<Move> moveSet = new HashSet<>();
+        Random random = new Random();
+        for (Move move : moves) {
+            if (move.commencedBy().isMrX() && piece.isMrX()) {
+                playerMoves.add(move);
+            } else if(move.commencedBy().isDetective() && piece.isDetective()) {
+                    playerMoves.add(move);
+            }
+        }
+        if (playerMoves.size() > 5 && piece.isMrX()) {
+            for (int i = 0; i < 5; i++) {
+                moveSet.add(playerMoves.get(random.nextInt(playerMoves.size())));
+            }
+        } else {
+            moveSet = Set.copyOf(playerMoves);
+        }
+        return ImmutableSet.copyOf(moveSet);
     }
 
     List<Pair<Move, Integer>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player, List<List<Node>> adj) {
@@ -146,11 +171,11 @@ public class MyAi implements Ai {
                     System.out.println(dij.dist[dest]);
                     score += dij.dist[dest];
                 }
-//                for(Move newMove : gameState.getAvailableMoves()) {
-//                    if(newMove.commencedBy().isMrX()) {
-//                        score++;
-//                    }
-//                }
+                for(Move newMove : gameState.getAvailableMoves()) {
+                    if(newMove.commencedBy().isMrX()) {
+                        score++;
+                    }
+                }
             } else if(player.piece().isDetective()) {
                 Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
                 dij.dijkstra(mrX.location());
