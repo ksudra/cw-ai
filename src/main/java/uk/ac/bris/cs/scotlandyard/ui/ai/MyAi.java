@@ -61,7 +61,6 @@ public class MyAi implements Ai {
             }
         }
 
-
         ImmutableSet<Player> detectives = makeDetectives(board);
 
         Board.GameState gameSimulation = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
