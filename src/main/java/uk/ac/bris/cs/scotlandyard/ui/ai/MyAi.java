@@ -67,7 +67,7 @@ public class MyAi implements Ai {
         Board.GameState gameSimulation = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
         Board.GameState initial = gameSimulation;
 
-        List<Pair<Move, Integer>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj);
+        List<Pair<Move, Integer>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, false);
         Move returnedMove = moveList.get(0).left();
         Stack<Move> moveStack = new Stack<>();
         if (moveList.size() >= 3) {
@@ -98,10 +98,10 @@ public class MyAi implements Ai {
                 }
 
                 for (Player detective:detectives) {
-                    gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives), detective, adj).get(0).left());
+                    gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives), detective, adj, true).get(0).left());
                 }
 
-                gameSimulation.advance(moveScores(randomSet(gameSimulation.getAvailableMoves(), mrX), ImmutableList.copyOf(detectives), mrX, adj).get(0).left());
+                gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, true).get(0).left());
                 n++;
             }
 
@@ -132,7 +132,7 @@ public class MyAi implements Ai {
         return ImmutableSet.copyOf(moveSet);
     }
 
-    List<Pair<Move, Integer>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player, List<List<Node>> adj) {
+    List<Pair<Move, Integer>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player, List<List<Node>> adj, boolean greedy) {
         List<Pair<Move, Integer>> moveList = new ArrayList<>();
         Board.GameState initial = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
         for(Move move: moves){
@@ -163,7 +163,7 @@ public class MyAi implements Ai {
                 }
             });
 
-            if(player.piece().isMrX()) {
+            if(player.piece().isMrX() && !greedy) {
                 for (Player detective : detectives) {
                     Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
                     dij.dijkstra(detective.location());
@@ -174,20 +174,9 @@ public class MyAi implements Ai {
                         score++;
                     }
                 }
-            } else if(player.piece().isDetective()) {
+            } else if(greedy) {
                 for (Node node:adj.get(player.location()))
-                    if (node.node ==
-                            (int) move.visit(new Move.Visitor<>(){
-                        @Override
-                        public Integer visit(Move.SingleMove move) {
-                            return move.destination;
-                        }
-
-                        @Override
-                        public Integer visit(Move.DoubleMove move) {
-                            return move.destination2;
-                        }
-                    })) {
+                    if (node.node == dest) {
                         score = node.weight;
                     }
             }
@@ -196,7 +185,7 @@ public class MyAi implements Ai {
         }
 
         moveList.sort(Comparator.comparing(move -> move.right()));
-        if (player.piece().isMrX()) {
+        if (player.piece().isMrX() && !greedy) {
             Collections.reverse(moveList);
         }
         return moveList;
