@@ -113,24 +113,24 @@ public class MyAi implements Ai {
         return returnedMove;
     }
 
-    ImmutableSet<Move> randomSet(ImmutableSet<Move> moves, Player player) {
-        List<Move> playerMoves = new ArrayList<>();
-        Set<Move> moveSet = new HashSet<>();
-        Random random = new Random();
-        for (Move move : moves) {
-            if (move.source() == player.location()) {
-                playerMoves.add(move);
-            }
-        }
-        if (playerMoves.size() > 5) {
-            for (int i = 0; i < 5; i++) {
-                moveSet.add(playerMoves.get(random.nextInt(playerMoves.size())));
-            }
-        } else {
-            moveSet = Set.copyOf(playerMoves);
-        }
-        return ImmutableSet.copyOf(moveSet);
-    }
+//    ImmutableSet<Move> randomSet(ImmutableSet<Move> moves, Player player) {
+//        List<Move> playerMoves = new ArrayList<>();
+//        Set<Move> moveSet = new HashSet<>();
+//        Random random = new Random();
+//        for (Move move : moves) {
+//            if (move.source() == player.location()) {
+//                playerMoves.add(move);
+//            }
+//        }
+//        if (playerMoves.size() > 5) {
+//            for (int i = 0; i < 5; i++) {
+//                moveSet.add(playerMoves.get(random.nextInt(playerMoves.size())));
+//            }
+//        } else {
+//            moveSet = Set.copyOf(playerMoves);
+//        }
+//        return ImmutableSet.copyOf(moveSet);
+//    }
 
     List<Pair<Move, Integer>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player, List<List<Node>> adj, boolean greedy) {
         List<Pair<Move, Integer>> moveList = new ArrayList<>();
