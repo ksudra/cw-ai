@@ -39,7 +39,8 @@ public class MyAi implements Ai {
 
         List<List<Node>> adj = new ArrayList<>();
         int w = 0;
-        for (int i = 0; i < setup.graph.nodes().size() + 1; i++) {
+        int maxNode = setup.graph.nodes().stream().max(Integer::compareTo).orElse(0);
+        for (int i = 0; i < maxNode + 1; i++) {
             List<Node> item = new ArrayList<>();
             adj.add(item);
             if(setup.graph.nodes().contains(i)) {
