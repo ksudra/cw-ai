@@ -86,7 +86,7 @@ public class MyAi implements Ai {
             Move currentMove = moveStack.pop();
             gameSimulation.advance(currentMove);
 
-            while(gameSimulation.getWinner() != mrX.piece() && n < 2) {
+            while(gameSimulation.getWinner() != mrX.piece() && n < 5) {
                 if (!gameSimulation.getWinner().isEmpty() && gameSimulation.getWinner() != mrX.piece()) {
                     gameSimulation = initial;
                     break;
@@ -105,7 +105,7 @@ public class MyAi implements Ai {
             }
 
         }
-        if(n >= 2) {
+        if(n >= 5) {
             returnedMove = moveList.get(0).left();
         }
 
