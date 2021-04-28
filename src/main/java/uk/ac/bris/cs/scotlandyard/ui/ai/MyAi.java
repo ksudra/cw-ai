@@ -26,62 +26,69 @@ public class MyAi implements Ai {
 			Pair<Long, TimeUnit> timeoutPair) {
 		this.setup = board.getSetup();
 		var moves = board.getAvailableMoves().asList();
-		Pair<Move, Integer> finalMove = new Pair(moves.get(new Random().nextInt(moves.size())), 0);
-		
+		Pair<Move, Integer> finalMove = new Pair<>(moves.get(new Random().nextInt(moves.size())), 0);
+
 		for(Piece player : board.getPlayers()){
 			if(player.isMrX()){
-				ImmutableMap<ScotlandYard.Ticket, Integer> mrXticket = makeTickets(
-						board.getPlayerTickets(player).get().getCount(TAXI),
-						board.getPlayerTickets(player).get().getCount(BUS),
-						board.getPlayerTickets(player).get().getCount(UNDERGROUND),
-						board.getPlayerTickets(player).get().getCount(DOUBLE),
-						board.getPlayerTickets(player).get().getCount(SECRET));
-				mrX = new Player(player, mrXticket, finalMove.left().source());
+				ImmutableMap<ScotlandYard.Ticket, Integer> mrXTicket = makeTickets(
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(TAXI),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(BUS),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(UNDERGROUND),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(DOUBLE),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(SECRET));
+				mrX = new Player(player, mrXTicket, finalMove.left().source());
 			}
 		}
 
 		List<List<Node>> adj = new ArrayList<>();
 		int w = 0;
-		// Initialize list for every node
-		for (int i : setup.graph.nodes()) {
+		int maxNode = setup.graph.nodes().stream().max(Integer::compareTo).orElse(0);
+		for (int i = 0; i < maxNode + 1; i++) {
 			List<Node> item = new ArrayList<>();
 			adj.add(item);
-			for (int j : setup.graph.adjacentNodes(i)) {
-				for (ScotlandYard.Transport t : setup.graph.edgeValue(i, j).orElse(null)) {
-					switch (t) {
-						case TAXI: w++;
-						case BUS: w += 2;
-						case UNDERGROUND: w += 4;
-						case FERRY: w += 8;
+			if(setup.graph.nodes().contains(i)) {
+				for (int j : setup.graph.adjacentNodes(i)) {
+					for (ScotlandYard.Transport t : Objects.requireNonNull(setup.graph.edgeValue(i, j).orElse(null))) {
+						switch (t) {
+							case TAXI: w++;
+							case BUS: w += 2;
+							case UNDERGROUND: w += 4;
+							case FERRY: w += 8;
+						}
 					}
+					w = w / Objects.requireNonNull(setup.graph.edgeValue(i, j).orElse(null)).size();
+					item.add(new Node(j, w));
 				}
-				w = w / Objects.requireNonNull(setup.graph.edgeValue(i, j).orElse(null)).size();
-				item.add(new Node(j, w));
+			} else {
+				item.add(new Node(i, Integer.MAX_VALUE));
 			}
 		}
+
 
 		ImmutableSet<Player> detectives = makeDetectives(board);
 
 		Board.GameState gameSimulation = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
 		Board.GameState initial = gameSimulation;
 
-		List<Pair<Move, Double>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj);
-		Move returnedMove = finalMove.left();
+		List<Pair<Move, Double>> moveList = moveScores(board, gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, false);
+		Move returnedMove = moveList.get(0).left();
 		Stack<Move> moveStack = new Stack<>();
-		for (int i = 2; i > -1; i--) {
-			moveStack.push(moveList.get(i).left());
+		if (moveList.size() >= 3) {
+			for (int i = 2; i > -1; i--) {
+				moveStack.push(moveList.get(i).left());
+			}
+		} else {
+			Collections.reverse(moveList);
+			for (Pair<Move, Double> move : moveList) {
+				moveStack.push(move.left());
+			}
 		}
 		boolean complete = false;
-
-
-
 		int n = 0;
 		while(!moveStack.isEmpty() && !complete) {
 
 			Move currentMove = moveStack.pop();
-			if(gameSimulation.getAvailableMoves().contains(currentMove)){
-				gameSimulation = gameSimulation.advance(currentMove);
-			}
+			gameSimulation.advance(currentMove);
 
 			while(gameSimulation.getWinner() != mrX.piece() && n < 5) {
 				if (!gameSimulation.getWinner().isEmpty() && gameSimulation.getWinner() != mrX.piece()) {
@@ -93,12 +100,11 @@ public class MyAi implements Ai {
 					break;
 				}
 
-				for (Player detective : detectives) {
-					if (gameSimulation.getAvailableMoves().asList().stream().anyMatch(move -> move.commencedBy() == detective.piece())) {
-
-						gameSimulation = gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives), detective, adj).get(0).left());
-					}
+				for (Player detective:detectives) {
+					gameSimulation.advance(moveScores(board, gameSimulation.getAvailableMoves(), List.copyOf(detectives), detective, adj, true).get(0).left());
 				}
+
+				gameSimulation.advance(moveScores(board, gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, true).get(0).left());
 				n++;
 			}
 
@@ -110,126 +116,100 @@ public class MyAi implements Ai {
 		return returnedMove;
 	}
 
-	List<Pair<Move, Double>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player, List<List<Node>> adj) {
+
+	List<Pair<Move, Double>> moveScores(Board board, ImmutableSet<Move> moves, List<Player> detectives, Player player, List<List<Node>> adj, boolean greedy) {
 		List<Pair<Move, Double>> moveList = new ArrayList<>();
 		Board.GameState initial = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
 		for(Move move: moves){
 			Double score = 0.0;
+			/*if (move.commencedBy().isMrX()) {
+				for (ScotlandYard.Ticket ticket : move.tickets()) {
+					switch (ticket) {
+						case TAXI: score += 1;
+						case BUS: score += 4;
+						case UNDERGROUND: score += 8;
+						case SECRET: score += 7;
+						case DOUBLE: score += 10;
+					}
+				}
+			}*/
 
-			Object dest = move.visit(new Move.Visitor<Object>() {
+			Board.GameState gameState = initial.advance(move);
+
+			int dest = move.visit(new Move.Visitor<>(){
 				@Override
-				public Object visit(Move.SingleMove move) {
+				public Integer visit(Move.SingleMove move) {
 					return move.destination;
 				}
 
 				@Override
-				public Object visit(Move.DoubleMove move) {
+				public Integer visit(Move.DoubleMove move) {
 					return move.destination2;
 				}
 			});
 
-			Board.GameState gameState = initial;
-			if(initial.getAvailableMoves().asList().contains(move)){
-				gameState = initial.advance(move);
+			ImmutableList<ScotlandYard.Ticket> tickets = move.visit(new Move.Visitor<>(){
+				@Override
+				public ImmutableList<ScotlandYard.Ticket> visit(Move.SingleMove move){ return ImmutableList.of(move.ticket);}
+
+				@Override
+				public ImmutableList<ScotlandYard.Ticket> visit(Move.DoubleMove move){ return ImmutableList.of(move.ticket1, move.ticket2, DOUBLE);}
+				});
+
+
+			if(player.piece().isMrX() && !greedy) {
+				ArrayList<Double> distances = new ArrayList<>();
+				for (Player detective : detectives) {
+					Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
+					dij.dijkstra(detective.location());
+					distances.add((double) Math.log(dij.dist[dest]));
+				}
+				score = meanOf(distances);
+				System.out.println(score);
+
+				if(tickets.contains(DOUBLE) || tickets.contains(SECRET)){
+					score = 0.5 * score;
+				}
+
+
+					if(setup.rounds.get(board.getMrXTravelLog().size())){
+						if(tickets.contains(DOUBLE)){
+						if(tickets.get(1) == SECRET)
+							score = 4 * score;
+						}
+						}
+					if(board.getMrXTravelLog().size() > 0 && setup.rounds.get(board.getMrXTravelLog().size() - 1)){
+						if(tickets.contains(SECRET)){
+							score = 4 * score;
+						}
+					}
+				    score = score * gameState.getAvailableMoves().size();
+			} else if(greedy) {
+				for (Node node:adj.get(player.location()))
+					if (node.node == dest) {
+						score = (double) node.cost;
+					}
 			}
 
-			Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
-			if(player.piece().isMrX()) {
-				ArrayList<Integer> distances = new ArrayList<>();
-				for (Player detective : detectives) {
-					dij.dijkstra(detective.location());
-					distances.add((dij.dist[(Integer)dest - 1]));
-				}
-				System.out.println(distances);
-				List<Double> squares = distances.stream().map((p -> (Double) Math.pow(p, 2))).collect(Collectors.toList());
-				Double squaresSum = squares.stream().mapToDouble(Double::doubleValue).sum();
-				Double var = (squaresSum - distances.size() * meanOf(distances)) / distances.size();
-				score = meanOf(distances) / var;
-			}
-			score = score * (gameState.getAvailableMoves().size());
-			/*if (move.commencedBy().isMrX()) {
-				for (ScotlandYard.Ticket ticket : move.tickets()) {
-					switch (ticket) {
-						case UNDERGROUND: score = 1.2 * score;
-						case SECRET: score = 1.2 * score;
-						case DOUBLE: score = 1.2 * score;
-					}
-				}
-			}*/
-			if(player.piece().isDetective()) {
-				dij.dijkstra(player.location());
-				score -= dij.dist[mrX.location()] ^ 2;
-			}
-			moveList.add(new Pair(move, score));
+			moveList.add(new Pair<>(move, score));
 		}
 
-		Collections.sort(moveList, Comparator.comparing(move -> (Double) move.right()));
-		Collections.reverse(moveList);
-		if(player.isMrX()) {
-			//System.out.println(moveList);
+		moveList.sort(Comparator.comparing(move -> move.right()));
+		if (player.piece().isMrX() && !greedy) {
+			Collections.reverse(moveList);
 		}
 		return moveList;
 	}
-
-	final class MyBoard implements Board {
-		private GameState gameState;
-		private MyBoard(GameState gameState) {
-			this.gameState = gameState;
-		}
-
-		@Nonnull
-		@Override
-		public GameSetup getSetup() {
-			return gameState.getSetup();
-		}
-
-		@Nonnull
-		@Override
-		public ImmutableSet<Piece> getPlayers() {
-			return gameState.getPlayers();
-		}
-
-		@Nonnull
-		@Override
-		public Optional<Integer> getDetectiveLocation(Piece.Detective detective) {
-			return gameState.getDetectiveLocation(detective);
-		}
-
-		@Nonnull
-		@Override
-		public Optional<TicketBoard> getPlayerTickets(Piece piece) {
-			return gameState.getPlayerTickets(piece);
-		}
-
-		@Nonnull
-		@Override
-		public ImmutableList<LogEntry> getMrXTravelLog() {
-			return gameState.getMrXTravelLog();
-		}
-
-		@Nonnull
-		@Override
-		public ImmutableSet<Piece> getWinner() {
-			return gameState.getWinner();
-		}
-
-		@Nonnull
-		@Override
-		public ImmutableSet<Move> getAvailableMoves() {
-			return gameState.getAvailableMoves();
-		}
-	}
-
 
 	public ImmutableSet<Player> makeDetectives(Board board){
 		ArrayList<Player> detectives = new ArrayList<>();
 		for(Piece player : board.getPlayers()){
 			if(player.isDetective() && board.getDetectiveLocation((Piece.Detective)player).isPresent()){
-				ImmutableMap<ScotlandYard.Ticket, Integer> tickets = makeTickets(board.getPlayerTickets(player).get().getCount(TAXI),
-						board.getPlayerTickets(player).get().getCount(BUS),
-						board.getPlayerTickets(player).get().getCount(UNDERGROUND),
-						board.getPlayerTickets(player).get().getCount(DOUBLE),
-						board.getPlayerTickets(player).get().getCount(SECRET));
+				ImmutableMap<ScotlandYard.Ticket, Integer> tickets = makeTickets(Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(TAXI),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(BUS),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(UNDERGROUND),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(DOUBLE),
+						Objects.requireNonNull(board.getPlayerTickets(player).orElse(null)).getCount(SECRET));
 
 				detectives.add(new Player(player, tickets, board.getDetectiveLocation((Piece.Detective) player).get()));
 			}
