@@ -40,6 +40,7 @@ public class MyAi implements Ai {
         List<List<Node>> adj = new ArrayList<>();
         int w = 0;
         int maxNode = setup.graph.nodes().stream().max(Integer::compareTo).orElse(0);
+        int minNode = setup.graph.nodes().stream().min(Integer::compareTo).orElse(0);
         for (int i = 0; i < maxNode + 1; i++) {
             List<Node> item = new ArrayList<>();
             adj.add(item);
@@ -66,7 +67,7 @@ public class MyAi implements Ai {
         Board.GameState gameSimulation = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
         Board.GameState initial = gameSimulation;
 
-        List<Pair<Move, Integer>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, false);
+        List<Pair<Move, Integer>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, false, minNode);
         Move returnedMove = moveList.get(0).left();
         Stack<Move> moveStack = new Stack<>();
         if (moveList.size() >= 3) {
@@ -97,10 +98,12 @@ public class MyAi implements Ai {
                 }
 
                 for (Player detective:detectives) {
-                    gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives), detective, adj, true).get(0).left());
+                    gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives),
+                            detective, adj, true, minNode).get(0).left());
                 }
 
-                gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, true).get(0).left());
+                gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives),
+                        mrX, adj, true, minNode).get(0).left());
                 n++;
             }
 
@@ -112,26 +115,8 @@ public class MyAi implements Ai {
         return returnedMove;
     }
 
-//    ImmutableSet<Move> randomSet(ImmutableSet<Move> moves, Player player) {
-//        List<Move> playerMoves = new ArrayList<>();
-//        Set<Move> moveSet = new HashSet<>();
-//        Random random = new Random();
-//        for (Move move : moves) {
-//            if (move.source() == player.location()) {
-//                playerMoves.add(move);
-//            }
-//        }
-//        if (playerMoves.size() > 5) {
-//            for (int i = 0; i < 5; i++) {
-//                moveSet.add(playerMoves.get(random.nextInt(playerMoves.size())));
-//            }
-//        } else {
-//            moveSet = Set.copyOf(playerMoves);
-//        }
-//        return ImmutableSet.copyOf(moveSet);
-//    }
-
-    List<Pair<Move, Integer>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player, List<List<Node>> adj, boolean greedy) {
+    List<Pair<Move, Integer>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player,
+                                         List<List<Node>> adj, boolean greedy, int minNode) {
         List<Pair<Move, Integer>> moveList = new ArrayList<>();
         Board.GameState initial = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
         for(Move move: moves){
@@ -164,7 +149,7 @@ public class MyAi implements Ai {
 
             if(player.piece().isMrX() && !greedy) {
                 for (Player detective : detectives) {
-                    Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj);
+                    Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj, minNode);
                     dij.dijkstra(detective.location());
                     score += dij.dist[dest];
                 }
@@ -214,5 +199,57 @@ public class MyAi implements Ai {
                 UNDERGROUND, underground,
                 ScotlandYard.Ticket.DOUBLE, x2,
                 ScotlandYard.Ticket.SECRET, secret);
+    }
+
+    static class Dijkstra {
+        public int[] dist;
+        private final Set<Integer> settled;
+        private final PriorityQueue<Node> priorityQueue;
+        private final int nodes;
+        List<List<Node>> adjacencyList;
+
+        public Dijkstra(int nodes, List<List<Node>> adjacencyList, int minNode)
+        {
+            this.adjacencyList = adjacencyList;
+            this.nodes = nodes;
+            dist = new int[nodes + minNode];
+            settled = new HashSet<>();
+            priorityQueue = new PriorityQueue<>(nodes, new Node());
+        }
+
+        public void dijkstra(int source) {
+
+            for (int i = 0; i < nodes + 1; i++)
+                dist[i] = Integer.MAX_VALUE;
+
+            priorityQueue.add(new Node(source, 0));
+
+            dist[source] = 0;
+            while (settled.size() != nodes) {
+                int u = priorityQueue.remove().node;
+                settled.add(u);
+                relax(u);
+            }
+        }
+
+        void relax(int u)
+        {
+            int edgeDistance;
+            int newDistance;
+
+            for (int i = 0; i < adjacencyList.get(u).size(); i++) {
+                Node v = adjacencyList.get(u).get(i);
+
+                if (!settled.contains(v.node)) {
+                    edgeDistance = v.weight;
+                    newDistance = dist[u] + edgeDistance;
+
+                    if (newDistance < dist[v.node])
+                        dist[v.node] = newDistance;
+
+                    priorityQueue.add(new Node(v.node, dist[v.node]));
+                }
+            }
+        }
     }
 }

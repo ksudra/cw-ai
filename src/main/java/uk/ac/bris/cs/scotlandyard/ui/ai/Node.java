@@ -2,7 +2,6 @@ package uk.ac.bris.cs.scotlandyard.ui.ai;
 
 import java.util.Comparator;
 
-// Class to represent a node in the graph
 public class Node implements Comparator<Node> {
     public int node;
     public int weight;
