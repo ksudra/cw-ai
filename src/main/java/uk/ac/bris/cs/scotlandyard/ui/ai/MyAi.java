@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableSet;
 import io.atlassian.fugue.Pair;
 import uk.ac.bris.cs.scotlandyard.model.*;
 
+import static com.google.common.math.Stats.meanOf;
 import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.*;
 
 public class MyAi implements Ai {
@@ -23,7 +24,7 @@ public class MyAi implements Ai {
             Pair<Long, TimeUnit> timeoutPair) {
         this.setup = board.getSetup();
         var moves = board.getAvailableMoves().asList();
-        Pair<Move, Integer> finalMove = new Pair<>(moves.get(new Random().nextInt(moves.size())), 0);
+        Pair<Move, Double> finalMove = new Pair<>(moves.get(new Random().nextInt(moves.size())), 0.0);
 
         for(Piece player : board.getPlayers()){
             if(player.isMrX()){
@@ -67,7 +68,7 @@ public class MyAi implements Ai {
         Board.GameState gameSimulation = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
         Board.GameState initial = gameSimulation;
 
-        List<Pair<Move, Integer>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, false, minNode);
+        List<Pair<Move, Double>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, false, minNode, board);
         Move returnedMove = moveList.get(0).left();
         Stack<Move> moveStack = new Stack<>();
         if (moveList.size() >= 3) {
@@ -76,7 +77,7 @@ public class MyAi implements Ai {
             }
         } else {
             Collections.reverse(moveList);
-            for (Pair<Move, Integer> move : moveList) {
+            for (Pair<Move, Double> move : moveList) {
                 moveStack.push(move.left());
             }
         }
@@ -99,11 +100,11 @@ public class MyAi implements Ai {
 
                 for (Player detective:detectives) {
                     gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives),
-                            detective, adj, true, minNode).get(0).left());
+                            detective, adj, true, minNode, board).get(0).left());
                 }
 
                 gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives),
-                        mrX, adj, true, minNode).get(0).left());
+                        mrX, adj, true, minNode, board).get(0).left());
                 n++;
             }
 
@@ -115,24 +116,32 @@ public class MyAi implements Ai {
         return returnedMove;
     }
 
-    List<Pair<Move, Integer>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player,
-                                         List<List<Node>> adj, boolean greedy, int minNode) {
-        List<Pair<Move, Integer>> moveList = new ArrayList<>();
+    List<Pair<Move, Double>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player,
+                                        List<List<Node>> adj, boolean greedy, int minNode, Board board) {
+        List<Pair<Move, Double>> moveList = new ArrayList<>();
         Board.GameState initial = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
         for(Move move: moves){
-            int score = 0;
-            if (move.commencedBy().isMrX()) {
-                for (ScotlandYard.Ticket ticket : move.tickets()) {
-                    switch (ticket) {
-                        case TAXI: score += 1;
-                        case BUS: score += 4;
-                        case UNDERGROUND: score += 8;
-                        case SECRET: score += 7;
-                        case DOUBLE: score += 10;
-                    }
-                }
-            }
-            
+            double score = 0.0;
+//            if (move.commencedBy().isMrX()) {
+//                for (ScotlandYard.Ticket ticket : move.tickets()) {
+//                    switch (ticket) {
+//                        case TAXI: score += 1;
+//                        case BUS: score += 4;
+//                        case UNDERGROUND: score += 8;
+//                        case SECRET: score += 7;
+//                        case DOUBLE: score += 10;
+//                    }
+//                }
+//            }
+
+            ImmutableList<ScotlandYard.Ticket> tickets = move.visit(new Move.Visitor<>(){
+                @Override
+                public ImmutableList<ScotlandYard.Ticket> visit(Move.SingleMove move){ return ImmutableList.of(move.ticket);}
+
+                @Override
+                public ImmutableList<ScotlandYard.Ticket> visit(Move.DoubleMove move){ return ImmutableList.of(move.ticket1, move.ticket2, DOUBLE);}
+            });
+
             Board.GameState gameState = initial.advance(move);
 
             int dest = move.visit(new Move.Visitor<>(){
@@ -148,16 +157,37 @@ public class MyAi implements Ai {
             });
 
             if(player.piece().isMrX() && !greedy) {
+                ArrayList<Double> distances = new ArrayList<>();
                 for (Player detective : detectives) {
                     Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj, minNode);
                     dij.dijkstra(detective.location());
-                    score += dij.dist[dest];
+                    distances.add(Math.log(dij.dist[dest]));
                 }
-                for(Move newMove : gameState.getAvailableMoves()) {
-                    if(newMove.commencedBy().isMrX()) {
-                        score++;
+                score = meanOf(distances);
+
+                if(tickets.contains(DOUBLE) || tickets.contains(SECRET)){
+                    score = 0.5 * score;
+                }
+
+                if(setup.rounds.get(board.getMrXTravelLog().size())){
+                    if(tickets.contains(DOUBLE)){
+                        if(tickets.get(1) == SECRET)
+                            score = 4 * score;
                     }
                 }
+                if(board.getMrXTravelLog().size() > 0 && setup.rounds.get(board.getMrXTravelLog().size() - 1)){
+                    if(tickets.contains(SECRET)){
+                        score = 4 * score;
+                    }
+                }
+
+                int n = 0;
+                for(Move newMove : gameState.getAvailableMoves()) {
+                    if(newMove.commencedBy().isMrX()) {
+                        n++;
+                    }
+                }
+                score = score * n;
             } else if(greedy) {
                 for (Node node:adj.get(player.location()))
                     if (node.node == dest) {
