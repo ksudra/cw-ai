@@ -15,7 +15,6 @@ import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.*;
 public class MyAi implements Ai {
     GameSetup setup;
     Player mrX;
-    MyGameStateFactory gameStateFactory = new MyGameStateFactory();
 
     @Nonnull @Override public String name() { return "mrX AI"; }
 
@@ -25,6 +24,12 @@ public class MyAi implements Ai {
         this.setup = board.getSetup();
         var moves = board.getAvailableMoves().asList();
         Pair<Move, Double> finalMove = new Pair<>(moves.get(new Random().nextInt(moves.size())), 0.0);
+        int red = 0;
+        int green = 0;
+        int blue = 0;
+        int white = 0;
+        int yellow = 0;
+        int MrX;
 
         for(Piece player : board.getPlayers()){
             if(player.isMrX()){
@@ -65,84 +70,155 @@ public class MyAi implements Ai {
 
         ImmutableSet<Player> detectives = makeDetectives(board);
 
-        Board.GameState gameSimulation = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
-        Board.GameState initial = gameSimulation;
-
-        List<Pair<Move, Double>> moveList = moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives), mrX, adj, false, minNode, board);
+        List<Pair<Move, Double>> moveList = moveScores(List.copyOf(board.getAvailableMoves()),
+                ImmutableList.copyOf(detectives), mrX, adj, minNode, board);
         Move returnedMove = moveList.get(0).left();
-        Stack<Move> moveStack = new Stack<>();
+        Queue<Move> moveQueue = new LinkedList<>();
         if (moveList.size() >= 3) {
-            for (int i = 2; i > -1; i--) {
-                moveStack.push(moveList.get(i).left());
+            for (int i = 0; i < 3; i++) {
+                moveQueue.add(moveList.get(i).left());
             }
         } else {
             Collections.reverse(moveList);
             for (Pair<Move, Double> move : moveList) {
-                moveStack.push(move.left());
+                moveQueue.add(move.left());
             }
         }
-        boolean complete = false;
+
+        for (Player detective:detectives) {
+            switch (detective.piece().webColour()) {
+                case "#f00":
+                    red = detective.location();
+                case "#0f0":
+                    green = detective.location();
+                case "#00f":
+                    blue = detective.location();
+                case "#fff":
+                    white = detective.location();
+                case "#ff0":
+                    yellow = detective.location();
+            }
+        }
+
+        MrX = returnedMove.visit(new Move.Visitor<>(){
+            @Override
+            public Integer visit(Move.SingleMove move) {
+                return move.destination;
+            }
+
+            @Override
+            public Integer visit(Move.DoubleMove move) {
+                return move.destination2;
+            }
+        });
+
+        boolean reset = false;
         int n = 0;
-        while(!moveStack.isEmpty() && !complete) {
+        while(!moveQueue.isEmpty() && n < 4) {
 
-            Move currentMove = moveStack.pop();
-            gameSimulation.advance(currentMove);
+            returnedMove = moveQueue.remove();
 
-            while(gameSimulation.getWinner() != mrX.piece() && n < 5) {
-                if (!gameSimulation.getWinner().isEmpty() && gameSimulation.getWinner() != mrX.piece()) {
-                    gameSimulation = initial;
-                    break;
-                } else if (gameSimulation.getWinner() == mrX.piece()) {
-                    returnedMove = currentMove;
-                    complete = true;
-                    break;
+                if (MrX == red) {
+                    reset = true;
+                } else if (MrX == green) {
+                    reset = true;
+                } else if (MrX == blue) {
+                    reset = true;
+                } else if (MrX == white) {
+                    reset = true;
+                } else if (MrX == yellow) {
+                    reset = true;
+                }
+
+                if (reset) {
+                    for (Player detective : detectives) {
+                        switch (detective.piece().webColour()) {
+                            case "#f00":
+                                red = detective.location();
+                            case "#0f0":
+                                green = detective.location();
+                            case "#00f":
+                                blue = detective.location();
+                            case "#fff":
+                                white = detective.location();
+                            case "#ff0":
+                                yellow = detective.location();
+                        }
+                    }
+                    MrX = mrX.location();
+                    reset = false;
                 }
 
                 for (Player detective:detectives) {
-                    gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), List.copyOf(detectives),
-                            detective, adj, true, minNode, board).get(0).left());
+                    List<Pair<Node, Integer>> newMoves = new ArrayList<>();
+                    switch (detective.piece().webColour()) {
+                        case "#f00":
+                            for(Node node:adj.get(red - minNode)) {
+                                int score = node.weight;
+                                newMoves.add(new Pair<>(node, score));
+                            }
+                            newMoves.sort(Comparator.comparing(move -> move.right()));
+                            red = newMoves.get(0).left().node;
+                        case "#0f0":
+                            for(Node node:adj.get(green - minNode)) {
+                                int score = node.weight;
+                                newMoves.add(new Pair<>(node, score));
+                            }
+                            newMoves.sort(Comparator.comparing(move -> move.right()));
+                            green = newMoves.get(0).left().node;
+                        case "#00f":
+                            for(Node node:adj.get(blue - minNode)) {
+                                int score = node.weight;
+                                newMoves.add(new Pair<>(node, score));
+                            }
+                            newMoves.sort(Comparator.comparing(move -> move.right()));
+                            blue = newMoves.get(0).left().node;
+                        case "#fff":
+                            for(Node node:adj.get(white - minNode)) {
+                                int score = node.weight;
+                                newMoves.add(new Pair<>(node, score));
+                            }
+                            newMoves.sort(Comparator.comparing(move -> move.right()));
+                            white = newMoves.get(0).left().node;
+                        case "#ff0":
+                            for(Node node:adj.get(yellow - minNode)) {
+                                int score = node.weight;
+                                newMoves.add(new Pair<>(node, score));
+                            }
+                            newMoves.sort(Comparator.comparing(move -> move.right()));
+                            yellow = newMoves.get(0).left().node;
+                    }
                 }
 
-                gameSimulation.advance(moveScores(gameSimulation.getAvailableMoves(), ImmutableList.copyOf(detectives),
-                        mrX, adj, true, minNode, board).get(0).left());
+                List<Pair<Node, Integer>> newMoves = new ArrayList<>();
+                for (Node node:adj.get(MrX - minNode)) {
+                    int score = node.weight;
+                    newMoves.add(new Pair<>(node, score));
+                }
+                newMoves.sort(Comparator.comparing(move -> move.right()));
+                MrX = newMoves.get(0).left().node;
                 n++;
             }
-
-        }
-        if(n >= 5) {
-            returnedMove = moveList.get(0).left();
-        }
-
         return returnedMove;
     }
 
-    List<Pair<Move, Double>> moveScores(ImmutableSet<Move> moves, List<Player> detectives, Player player,
-                                        List<List<Node>> adj, boolean greedy, int minNode, Board board) {
+
+
+    List<Pair<Move, Double>> moveScores(List<Move> moves, List<Player> detectives, Player player,
+                                        List<List<Node>> adj, int minNode, Board board) {
         List<Pair<Move, Double>> moveList = new ArrayList<>();
-        Board.GameState initial = gameStateFactory.build(setup, mrX, ImmutableList.copyOf(detectives));
-        for(Move move: moves){
+
+        for(Move move: moves) {
             double score = 0.0;
-//            if (move.commencedBy().isMrX()) {
-//                for (ScotlandYard.Ticket ticket : move.tickets()) {
-//                    switch (ticket) {
-//                        case TAXI: score += 1;
-//                        case BUS: score += 4;
-//                        case UNDERGROUND: score += 8;
-//                        case SECRET: score += 7;
-//                        case DOUBLE: score += 10;
-//                    }
-//                }
-//            }
 
             ImmutableList<ScotlandYard.Ticket> tickets = move.visit(new Move.Visitor<>(){
                 @Override
                 public ImmutableList<ScotlandYard.Ticket> visit(Move.SingleMove move){ return ImmutableList.of(move.ticket);}
 
                 @Override
-                public ImmutableList<ScotlandYard.Ticket> visit(Move.DoubleMove move){ return ImmutableList.of(move.ticket1, move.ticket2, DOUBLE);}
+                public ImmutableList<ScotlandYard.Ticket> visit(Move.DoubleMove move){ return ImmutableList.of(move.ticket1,
+                        move.ticket2, DOUBLE);}
             });
-
-            Board.GameState gameState = initial.advance(move);
 
             int dest = move.visit(new Move.Visitor<>(){
                 @Override
@@ -156,7 +232,7 @@ public class MyAi implements Ai {
                 }
             });
 
-            if(player.piece().isMrX() && !greedy) {
+            if(player.piece().isMrX()) {
                 ArrayList<Double> distances = new ArrayList<>();
                 for (Player detective : detectives) {
                     Dijkstra dij = new Dijkstra(setup.graph.nodes().size(), adj, minNode);
@@ -181,27 +257,14 @@ public class MyAi implements Ai {
                     }
                 }
 
-                int n = 0;
-                for(Move newMove : gameState.getAvailableMoves()) {
-                    if(newMove.commencedBy().isMrX()) {
-                        n++;
-                    }
-                }
-                score = score * n;
-            } else if(greedy) {
-                for (Node node:adj.get(player.location()))
-                    if (node.node == dest) {
-                        score = node.weight;
-                    }
+                score = score * setup.graph.adjacentNodes(dest).size();
             }
 
             moveList.add(new Pair<>(move, score));
         }
 
         moveList.sort(Comparator.comparing(move -> move.right()));
-        if (player.piece().isMrX() && !greedy) {
-            Collections.reverse(moveList);
-        }
+        Collections.reverse(moveList);
         return moveList;
     }
 
@@ -230,8 +293,9 @@ public class MyAi implements Ai {
                 ScotlandYard.Ticket.DOUBLE, x2,
                 ScotlandYard.Ticket.SECRET, secret);
     }
+}
 
-    static class Dijkstra {
+    class Dijkstra {
         public int[] dist;
         private final Set<Integer> settled;
         private final PriorityQueue<Node> priorityQueue;
@@ -282,4 +346,6 @@ public class MyAi implements Ai {
             }
         }
     }
-}
+
+
+
