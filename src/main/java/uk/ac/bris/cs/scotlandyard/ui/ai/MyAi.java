@@ -207,8 +207,19 @@ public class MyAi implements Ai {
     List<Pair<Move, Double>> moveScores(List<Move> moves, List<Player> detectives, Player player,
                                         List<List<Node>> adj, int minNode, Board board) {
         List<Pair<Move, Double>> moveList = new ArrayList<>();
+        Random random = new Random();
+        List<Move> movesCopy = new ArrayList<>(moves);
+        List<Move> newMoves = new ArrayList<>();
 
-        for(Move move: moves) {
+        if(moves.size() > 50) {
+            for (int i = 0; i < 50; i++) {
+                int index = random.nextInt(movesCopy.size());
+                newMoves.add(movesCopy.get(index));
+                movesCopy.remove(index);
+            }
+        }
+
+        for(Move move: newMoves) {
             double score = 0.0;
 
             ImmutableList<ScotlandYard.Ticket> tickets = move.visit(new Move.Visitor<>(){
